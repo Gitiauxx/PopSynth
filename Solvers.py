@@ -4,7 +4,8 @@ _NEPOCH = 20
 
 
 class softmax_descent():
-    def __init__(self, X, M, W, eta, batchSize=None, chatol=None, testSet=True, beta=None):
+    def __init__(self, X, M, W, eta, batchSize=None, chatol=None, losstol=None, testSet=True, beta=None,
+                 nepoch=None):
 
         self.X = X
         self.eta = eta
@@ -31,6 +32,16 @@ class softmax_descent():
             self.chatol = 0.01
         else:
             self.chatol = chatol
+
+        if losstol == None:
+            self.losstol = 1.5
+        else:
+            self.losstol = losstol
+
+        if nepoch is None:
+            self.nepoch = 20
+        else:
+            self.nepoch = nepoch
 
     def expand_sample(self, X, W):
         return np.repeat(X, W, axis=0)
@@ -76,24 +87,20 @@ class softmax_descent():
 
     def iterateBatch(self):
         X = self.reshuffle()
-        i = 0
         for XB in self.next_batch(self.batchSize, X):
-            # if i % 500 == 0:
-            # print(self.computeLoss())
             self.updatebeta(XB)
-            i = i + 1
 
     def epochIter(self):
 
-        GRADIENT_TRAINING = np.zeros(_NEPOCH)
-        LOSS = np.zeros(_NEPOCH)
+        GRADIENT_TRAINING = np.zeros(self.nepoch)
+        LOSS = np.zeros(self.nepoch)
 
-        for i in np.arange(1, _NEPOCH + 1):
+        for i in np.arange(1, self.nepoch + 1):
             LOSS[i - 1] = self.computeLoss()
             GRADIENT_TRAINING[i - 1] = np.sum(
                 self.gradient(self.X, np.transpose(self.beta), self.M, W=self.W)[:, 0] ** 2)
 
-            if (i >= 2) & (LOSS[i - 1] / LOSS[i - 2] >= 1 - self.chatol) | (LOSS[i - 1] <= 1.6):
+            if (i >= 2) & (LOSS[i - 1] / LOSS[i - 2] >= 1 - self.chatol) | (LOSS[i - 1] <= self.losstol):
                 break  # stop conditions
 
             self.iterateBatch()

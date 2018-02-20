@@ -8,11 +8,13 @@ import pandas as pd
 
 
 class synthetize(object):
-    def __init__(self, year, variable_h, census_config, variables_p=None):
+    def __init__(self, year, variable_h, census_config, optimization_config, variables_p=None, todraw=None):
         self.year = year
         self.__variable_h = variable_h
         self.census_config = census_config
+        self.optimization_config = optimization_config
         self.__variable_p = variables_p
+        self.todraw = todraw
         self._CACHE = {}
 
     @classmethod
@@ -45,6 +47,7 @@ class synthetize(object):
         variables_h = cfg['Households Variables']
         year = cfg['year']
         cenus_config = cfg['census configuration']
+        optimization_config = cfg['optimization configuration']
 
         if 'Persons variables' in cfg:
             variables_p = cfg['Persons variables']
@@ -54,6 +57,7 @@ class synthetize(object):
         synth = cls(year,
                     variables_h,
                     cenus_config,
+                    optimization_config,
                     variables_p=variables_p)  # create a synthetize method
 
         return synth
@@ -151,7 +155,10 @@ class synthetize(object):
 
         X, M, W = self.to_matrix()  # create input matrix and check whether they are properly balanced
 
-        sf = softmax_descent(X, M, W, 1.0, batchSize=256)  # solver
+        opt_config = self.optimization_config
+        sf = softmax_descent(X, M, W, opt_config['eta'], batchSize=256,
+                             losstol=opt_config['losstol'], chatol=opt_config['chatol'],
+                             nepoch=opt_config['number of epochs'])  # solver
         s = time.time()
         print("Estimating the joint distirbution of households characteristics in each location")
         _, loss = sf.epochIter()
@@ -182,13 +189,30 @@ class synthetize(object):
             N = int(NX[i] * nhouseholds)
             H = np.random.choice(sample.index, N, p=P, replace=True)
             dh = sample.loc[H]
-            dh['GEOID'] = marginal.index[i]
-            dh['GEOID']
+            dh.loc[:, 'GEOID'] = marginal.index[i]
             dh_list.append(dh[['GEOID']])
 
         data = pd.concat(dh_list)  # create data with index=SERIALNO and one column for geo id
 
         return data
+
+    def validation(self, data):
+
+        data = data.join(self.sample, how='left')  # add households characteristics from sample
+        sim_marginals = data.groupby('GEOID').sum()  # summarize by location
+
+        val_table = sim_marginals.join(self.marginal_acs, lsuffix='_sim')
+
+        return val_table.reindex_axis(sorted(val_table.columns), axis=1)
+
+    def countySummary(self, data):
+
+        data['county'] = data.index
+        data['county'] = data.county.apply(lambda x: int(x[1:5]))
+
+        # data = data.join(self.sample[['NP']], how='left')  # add household size from sample
+
+        return data.groupby('county').size()
 
 
 if __name__ == '__main__':
@@ -197,4 +221,6 @@ if __name__ == '__main__':
 
     beta, loss = sy.estimate_distribution()
     print(loss)
-    print(sy.draw(beta, sy.marginal_acs['nhouseholds_all'].sum()))
+    data = sy.draw(beta, sy.marginal_acs['nhouseholds_all'].sum())
+    print(sy.validation(data))
+    print(sy.countySummary(data).loc[[8001, 8005, 8013, 8014, 8031, 8035, 8059]])
