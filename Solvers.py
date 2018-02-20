@@ -93,7 +93,7 @@ class softmax_descent():
             GRADIENT_TRAINING[i - 1] = np.sum(
                 self.gradient(self.X, np.transpose(self.beta), self.M, W=self.W)[:, 0] ** 2)
 
-            if (i >= 2) & (LOSS[i - 1] / LOSS[i - 2] >= 1 - self.chatol) | (LOSS[i - 1] <= 2.5):
+            if (i >= 2) & (LOSS[i - 1] / LOSS[i - 2] >= 1 - self.chatol) | (LOSS[i - 1] <= 1.6):
                 break  # stop conditions
 
             self.iterateBatch()
