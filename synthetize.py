@@ -6,6 +6,8 @@ import numpy as np
 import time
 import pandas as pd
 
+pd.options.mode.chained_assignment = None
+
 
 class synthetize(object):
     def __init__(self, year, variable_h, census_config, optimization_config, variables_p=None, todraw=None):
@@ -102,7 +104,7 @@ class synthetize(object):
         else:
             marginals = self._CACHE['marginals']
 
-        return marginals
+        return marginals[marginals.nhouseholds_all > 0]
 
     @property
     def sample(self):
@@ -182,7 +184,7 @@ class synthetize(object):
         SX = np.divide(SX, NX[np.newaxis, :])  # probability to draw a household given the location
 
         dh_list = []
-        print("Drawwing %d households from the sample according to "
+        print("Drawing %d households from the sample according to "
               "the estimated joint distribution" % nhouseholds)
         for i in np.arange(M.shape[0]):  # start drawing households in each location
             P = SX[:, i]
@@ -207,9 +209,7 @@ class synthetize(object):
 
     def countySummary(self, data):
 
-        data['county'] = data.index
-        data['county'] = data.county.apply(lambda x: int(x[1:5]))
-
+        data.loc[:, 'county'] = data.GEOID.apply(lambda x: int(x[1:5]))
         # data = data.join(self.sample[['NP']], how='left')  # add household size from sample
 
         return data.groupby('county').size()
@@ -220,7 +220,10 @@ if __name__ == '__main__':
     sy = synthetize.from_config(str_or_buffer=yamlfile)
 
     beta, loss = sy.estimate_distribution()
-    print(loss)
     data = sy.draw(beta, sy.marginal_acs['nhouseholds_all'].sum())
-    print(sy.validation(data))
-    print(sy.countySummary(data).loc[[8001, 8005, 8013, 8014, 8031, 8035, 8059]])
+    validation_data = sy.validation(data)
+    county_summary = sy.countySummary(data).loc[[8001, 8005, 8013, 8014, 8031, 8035, 8059]]
+
+    data.to_csv('..\\Data\\Outputs\\households_table.csv')
+    validation_data.to_csv('..\\Data\\Outputs\\validation_table.csv')
+    county_summary.to_csv('..\\Data\\Outputs\\county_table.csv')

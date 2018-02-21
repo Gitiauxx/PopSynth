@@ -102,12 +102,14 @@ class Census(object):
 
     def get_pums_h(self):
         zf = zipfile.ZipFile(BytesIO(requests.get(self.pums_url + 'csv_hco.zip').content))
-        pums_h = pd.read_csv(zf.open('ss16hco.csv'))
+        year_2digits = self.year - 2000
+        pums_h = pd.read_csv(zf.open('ss' + str(year_2digits) + 'hco.csv'))
         return pums_h
 
     def get_pums_p(self):
         zf = zipfile.ZipFile(BytesIO(requests.get(self.pums_url + 'csv_pco.zip').content))
-        pums_p = pd.read_csv(zf.open('ss16pco.csv'))
+        year_2digits = self.year - 2000
+        pums_p = pd.read_csv(zf.open('ss' + str(year_2digits) + 'pco.csv'))
         return pums_p
 
 
