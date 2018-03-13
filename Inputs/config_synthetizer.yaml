@@ -19,7 +19,7 @@ Persons variables:
 
 census configuration: 
  config acs:  'C:\\Users\\xgitiaux\Documents\\Research and Analysis\\Synthetizer\\Data\\Inputs\\config_ACS_variables.yaml'
- key: 9d119de5f3de42bf4570723644941f4a4a707b8f
+ key: #####
  base_url: 'https://api.census.gov/data/year/acs/acs5?get=NAME,variables&for=block%20group:*&in=in_field&key=your_key'
  geo_url: 'https://www2.census.gov/geo/docs/reference/codes/files/st08_co_cou.txt'
  pums_url: 'https://www2.census.gov/programs-surveys/acs/data/pums/year/5-Year/'
