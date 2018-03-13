@@ -13,6 +13,8 @@ class synthetize(object):
     def __init__(self, year, variable_h, census_config, optimization_config, variables_p=None, todraw=None):
         self.year = year
         self.__variable_h = variable_h
+        self.__variable_h.append('nhouseholds')
+
         self.census_config = census_config
         self.optimization_config = optimization_config
         self.__variable_p = variables_p
@@ -50,6 +52,7 @@ class synthetize(object):
         year = cfg['year']
         cenus_config = cfg['census configuration']
         optimization_config = cfg['optimization configuration']
+        to_draw = cfg['number of households']
 
         if 'Persons variables' in cfg:
             variables_p = cfg['Persons variables']
@@ -60,7 +63,8 @@ class synthetize(object):
                     variables_h,
                     cenus_config,
                     optimization_config,
-                    variables_p=variables_p)  # create a synthetize method
+                    variables_p=variables_p,
+                    todraw=to_draw)  # create a synthetize method
 
         return synth
 
@@ -162,13 +166,18 @@ class synthetize(object):
                              losstol=opt_config['losstol'], chatol=opt_config['chatol'],
                              nepoch=opt_config['number of epochs'])  # solver
         s = time.time()
-        print("Estimating the joint distirbution of households characteristics in each location")
+        print("Estimating the joint distribution of households characteristics in each location")
         _, loss = sf.epochIter()
         print("time elapsed: {:.2f}s".format(time.time() - s))
 
         return sf.beta, loss
 
-    def draw(self, beta, nhouseholds):
+    def draw(self, beta):
+
+        if self.todraw is not None:
+            nhouseholds = self.todraw
+        else:
+            nhouseholds = self.marginal_acs['nhouseholds_all'].sum()
 
         X, M, W = self.to_matrix()  # create input matrix and check whether they are properly balanced
         sample = self.sample
@@ -204,6 +213,10 @@ class synthetize(object):
         sim_marginals = data.groupby('GEOID').sum()  # summarize by location
 
         val_table = sim_marginals.join(self.marginal_acs, lsuffix='_sim')
+        for col in list(self.marginal_acs.columns):
+            if col != 'nhouseholds_all':
+                val_table[col] = 100 * val_table[col] / val_table['nhouseholds_all']
+                val_table[col + '_sim'] = 100 * val_table[col + '_sim'] / val_table['nhouseholds_all_sim']
 
         return val_table.reindex_axis(sorted(val_table.columns), axis=1)
 
@@ -220,7 +233,7 @@ if __name__ == '__main__':
     sy = synthetize.from_config(str_or_buffer=yamlfile)
 
     beta, loss = sy.estimate_distribution()
-    data = sy.draw(beta, sy.marginal_acs['nhouseholds_all'].sum())
+    data = sy.draw(beta)
     validation_data = sy.validation(data)
     county_summary = sy.countySummary(data).loc[[8001, 8005, 8013, 8014, 8031, 8035, 8059]]
 

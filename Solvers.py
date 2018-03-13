@@ -97,6 +97,7 @@ class softmax_descent():
 
         for i in np.arange(1, self.nepoch + 1):
             LOSS[i - 1] = self.computeLoss()
+            print(LOSS[i - 1])
             GRADIENT_TRAINING[i - 1] = np.sum(
                 self.gradient(self.X, np.transpose(self.beta), self.M, W=self.W)[:, 0] ** 2)
 
