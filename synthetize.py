@@ -213,10 +213,24 @@ class synthetize(object):
         sim_marginals = data.groupby('GEOID').sum()  # summarize by location
 
         val_table = sim_marginals.join(self.marginal_acs, lsuffix='_sim')
-        for col in list(self.marginal_acs.columns):
-            if col != 'nhouseholds_all':
-                val_table[col] = 100 * val_table[col] / val_table['nhouseholds_all']
-                val_table[col + '_sim'] = 100 * val_table[col + '_sim'] / val_table['nhouseholds_all_sim']
+
+        if self.__variable_p is not None:
+            var0 = self.__variable_p[0]
+            var0_cat = [v[0] + '_' + v[1] for v in self.variables_p if v[0] == var0]
+            val_table['population'] = val_table[var0_cat].sum(axis=1)
+            val_table['population_sim'] = val_table[[var + '_sim' for var in var0_cat]].sum(axis=1)
+
+        for col in self.variables:
+            if col[0] != 'nhouseholds':
+                colvar = col[0] + '_' + col[1]
+                val_table[colvar] = 100 * val_table[colvar] / val_table['nhouseholds_all']
+                val_table[colvar + '_sim'] = 100 * val_table[colvar + '_sim'] / val_table['nhouseholds_all_sim']
+
+        if self.variables_p is not None:
+            for col in self.variables_p:
+                colvar = col[0] + '_' + col[1]
+                val_table[colvar] = 100 * val_table[colvar] / val_table['population']
+                val_table[colvar + '_sim'] = 100 * val_table[colvar + '_sim'] / val_table['population_sim']
 
         return val_table.reindex_axis(sorted(val_table.columns), axis=1)
 
